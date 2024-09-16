@@ -57,7 +57,7 @@ export class App extends gfx.GfxApp
     // --- Update is called once each frame by the main graphics loop ---
     update(deltaTime: number): void 
     {
-        const shipSpeed = 1.0; // normalized device units / sec
+        const shipSpeed = 1.0; // normalized device units / second
 
         if(this.ship.position.distanceTo(this.mousePosition) > 0.01)
         {
