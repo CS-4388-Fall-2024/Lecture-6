@@ -10,10 +10,16 @@ export class App extends gfx.GfxApp
 {
     private ship: gfx.Mesh2;
     private star: gfx.Mesh2;
+    private mine: gfx.Mesh2;
+
+    private mines: gfx.Node2;
     
     private starfield: gfx.Particles2;
 
     private mousePosition: gfx.Vector2;
+
+    private timeSinceLastSpawn: number;
+
 
     // --- Create the App class ---
     constructor()
@@ -23,10 +29,15 @@ export class App extends gfx.GfxApp
 
         this.ship = gfx.Geometry2Factory.createBox();
         this.star = gfx.Geometry2Factory.createBox();
+        this.mine = gfx.Geometry2Factory.createBox();
 
         this.starfield = new gfx.Particles2(this.star, 200);
     
         this.mousePosition = new gfx.Vector2();
+
+        this.mines =  new gfx.Node2;
+
+        this.timeSinceLastSpawn = 0;
     }
 
 
@@ -40,6 +51,9 @@ export class App extends gfx.GfxApp
         
         this.star.material.texture = new gfx.Texture('./star.png');
 
+        this.mine.scale.set(0.12, 0.12);
+        this.mine.material.texture = new gfx.Texture('./mine.png');
+
         for(let i = 0; i < this.starfield.numParticles; i++)
         {
             this.starfield.particleSizes[i] = Math.random()*0.008 + 0.002;
@@ -50,7 +64,10 @@ export class App extends gfx.GfxApp
         this.starfield.update(true, true);
 
         this.scene.add(this.starfield);
+        
         this.scene.add(this.ship);
+
+        this.scene.add(this.mines);
     }
 
     
@@ -58,6 +75,8 @@ export class App extends gfx.GfxApp
     update(deltaTime: number): void 
     {
         const shipSpeed = 1.0; // normalized device units / second
+        const mineSpawnInterval = 0.3;
+        const mineSpeed = 0.4;
 
         if(this.ship.position.distanceTo(this.mousePosition) > 0.01)
         {
@@ -67,6 +86,31 @@ export class App extends gfx.GfxApp
             shipDirection.rotate(this.ship.rotation);
             this.ship.position.add(shipDirection);
         }
+
+        this.timeSinceLastSpawn += deltaTime;
+
+    
+
+        if(this.timeSinceLastSpawn >= mineSpawnInterval){
+            this.spawnMine();
+            this.timeSinceLastSpawn = 0;
+        }
+
+        this.mines.children.forEach(mine => {
+            const mineToShip = gfx.Vector2.subtract(this.ship.position, mine.position);
+            mineToShip.normalize();
+            mineToShip.multiplyScalar(mineSpeed * deltaTime);
+            mine.position.add(mineToShip);
+
+        });
+
+        this.mines.children.forEach(mine => {
+            if(this.ship.intersects(mine, gfx.IntersectionMode2.AXIS_ALIGNED_BOUNDING_BOX)){
+                mine.remove();
+            }
+
+        });
+
     }
 
     /**
@@ -87,5 +131,25 @@ export class App extends gfx.GfxApp
     onMouseMove(event: MouseEvent): void 
     {
         this.mousePosition.copy(this.getNormalizedDeviceCoordinates(event.x, event.y));
+    }
+
+    spawnMine(): void{
+        // this.scene.add(this.mine);
+        const mineSpawnDistance= 1.5;
+        const mineInstance = this.mine.createInstance();
+        const mineSpawnLimit = 20;
+
+
+        const mineRotation = Math.random() * Math.PI * 2;
+        const mineDirection = gfx.Vector2.rotate(new gfx.Vector2(0,mineSpawnDistance), mineRotation);
+        mineInstance.position.add(mineDirection);
+
+        this.mines.add(mineInstance);
+
+        if (this.mines.children.length > mineSpawnLimit){
+            this.mines.children[0].remove();
+        }
+
+        
     }
 }
